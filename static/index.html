@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Song Game</title>
+    <link rel="stylesheet" href="/static/styles.css">
+  </head>
+  <body>
+    <main class="shell">
+      <section id="home" class="view active" aria-labelledby="home-title">
+        <div class="masthead">
+          <p class="eyebrow">Song Game</p>
+          <h1 id="home-title">Pick a mode</h1>
+        </div>
+
+        <div class="mode-grid">
+          <button class="mode-tile" id="guess-lyric-tile" type="button">
+            <span class="tile-icon" aria-hidden="true">L</span>
+            <span>
+              <span class="tile-title">Guess the Lyric</span>
+              <span class="tile-copy">Lyrics appear, you guess the song and artist.</span>
+            </span>
+          </button>
+
+          <button class="mode-tile" id="guess-song-tile" type="button">
+            <span class="tile-icon" aria-hidden="true">P</span>
+            <span>
+              <span class="tile-title">Guess the Song</span>
+              <span class="tile-copy">Play a short preview, then guess the song and artist.</span>
+            </span>
+          </button>
+        </div>
+      </section>
+
+      <section id="game" class="view" aria-labelledby="game-title">
+        <div class="topbar">
+          <button class="icon-button" id="back-button" type="button" aria-label="Back to modes" title="Back">
+            &larr;
+          </button>
+          <div>
+            <p class="eyebrow">Mode</p>
+            <h1 id="game-title">Guess the Lyric</h1>
+          </div>
+        </div>
+
+        <div class="game-grid">
+          <section class="lyrics-panel" aria-label="Prompt">
+            <div class="lyrics-header">
+              <h2 id="prompt-title">Lyrics</h2>
+              <button id="play-button" class="primary-button" type="button">Play</button>
+            </div>
+            <pre id="lyrics-box">Press Play to load a random song from your playlist.</pre>
+            <div id="audio-box" class="audio-box hidden">
+              <audio id="audio-player" controls></audio>
+            </div>
+          </section>
+
+          <form id="guess-form" class="guess-panel">
+            <label>
+              Song name
+              <input id="song-input" name="song_name" type="text" autocomplete="off" required>
+            </label>
+            <label>
+              Artist
+              <input id="artist-input" name="artist" type="text" autocomplete="off" required>
+            </label>
+            <button class="primary-button" id="submit-button" type="submit" disabled>Submit Guess</button>
+            <p id="result-message" class="result-message" role="status" aria-live="polite"></p>
+            <p id="answer-message" class="answer-message"></p>
+          </form>
+        </div>
+      </section>
+    </main>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>
