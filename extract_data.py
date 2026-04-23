@@ -1,28 +1,10 @@
 # '''
 # api keys here
-# https://developer.spotify.com/dashboard/4a6473d6534b46c088b34b350e6eb2e8
+# https://developer.spotify.com/dashboard/
 
 # documentation here
 # https://developer.spotify.com/documentation/web-api
 # '''
-
-# import spotipy
-# from spotipy.oauth2 import SpotifyClientCredentials
-
-
-# sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(
-#     client_id=client_id,
-#     client_secret=client_secret
-# ))
-
-# def get_playlist_data(url):
-#     playlist_id = "0XLpyAsUlAZaCfYZnGq2xL"
-#     sp.playlist_tracks(playlist_id, market="IN")
-#     result = sp.playlist_tracks(url)
-#     print(result)
-
-# url = "https://open.spotify.com/playlist/0XLpyAsUlAZaCfYZnGq2xL"
-# get_playlist_data(url)
 
 
 import spotipy
