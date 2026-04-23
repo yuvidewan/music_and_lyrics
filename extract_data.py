@@ -9,8 +9,6 @@
 # import spotipy
 # from spotipy.oauth2 import SpotifyClientCredentials
 
-# client_id = "e2c1bf661c5e4264beaa41533bcdba23"
-# client_secret = "b3cfc038f03e46cdb4ccdf6cdade1a98"
 
 # sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(
 #     client_id=client_id,
@@ -51,8 +49,9 @@ def extract():
         scope="playlist-read-private",
         cache_path=".cache"
     ))
-    # https://open.spotify.com/playlist/3JXeBOl0C7b55w1Y8IiwSx?si=5b7QQXAbS1qUuOxjvs8yvg
-    results = sp.playlist_tracks("3JXeBOl0C7b55w1Y8IiwSx")
+    # https://open.spotify.com/playlist/3JXeBOl0C7b55w1Y8IiwSx?si=5b7QQXAbS1qUuOxjvs8yvg ROCKAFELLAS
+    # https://open.spotify.com/playlist/1Y50zhgUXm0LytYnNYsRZo?si=tqwN-4F7QAyFapIet8JAfA MINE
+    results = sp.playlist_tracks("1Y50zhgUXm0LytYnNYsRZo")
     return results
     # print(type(results))
     # print(results.keys())
