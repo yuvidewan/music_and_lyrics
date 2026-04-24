@@ -31,9 +31,10 @@ def extract():
         scope="playlist-read-private",
         cache_path=".cache"
     ))
+    # https://open.spotify.com/playlist/37i9dQZF1DWWylYLMvjuRG?si=_xkiqDq_RCq42SCEg88QOw POP
     # https://open.spotify.com/playlist/3JXeBOl0C7b55w1Y8IiwSx?si=5b7QQXAbS1qUuOxjvs8yvg ROCKAFELLAS
     # https://open.spotify.com/playlist/1Y50zhgUXm0LytYnNYsRZo?si=tqwN-4F7QAyFapIet8JAfA MINE
-    results = sp.playlist_tracks("3JXeBOl0C7b55w1Y8IiwSx")
+    results = sp.playlist_tracks("37i9dQZF1DWWylYLMvjuRG")
     items = list(results.get("items", []))
 
     while results.get("next"):
