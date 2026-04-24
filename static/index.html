@@ -4,72 +4,220 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Song Game</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/styles.css">
   </head>
   <body>
-    <main class="shell">
-      <section id="home" class="view active" aria-labelledby="home-title">
-        <div class="masthead">
-          <p class="eyebrow">Song Game</p>
-          <h1 id="home-title">Pick a mode</h1>
+    <div class="ambient ambient-one"></div>
+    <div class="ambient ambient-two"></div>
+
+    <main class="app-shell">
+      <section id="home" class="view active home-view" aria-labelledby="home-title">
+        <div class="hero-copy">
+          <p class="eyebrow">Music Party Game</p>
+          <h1 id="home-title">Pick a mode, lock a run type, and jump straight into the round.</h1>
+          <p class="hero-note">Album cover, lyrics, preview, and finish-the-lyric all run from one flow, with classic, arcade, and timed options built in.</p>
         </div>
 
+        <section class="setup-panel" aria-labelledby="setup-title">
+          <div class="setup-copy">
+            <p class="panel-label">Run Setup</p>
+            <h2 id="setup-title">Choose how the session should play</h2>
+          </div>
+
+          <div class="segmented-control" id="session-type-control" role="tablist" aria-label="Session type">
+            <button class="segment active" type="button" data-session-type="classic">Classic</button>
+            <button class="segment" type="button" data-session-type="arcade">Arcade</button>
+            <button class="segment" type="button" data-session-type="timed">Timed</button>
+          </div>
+
+          <div class="setup-options">
+            <label class="field compact-field hidden" id="arcade-option-field">
+              <span>Arcade songs</span>
+              <select id="arcade-count">
+                <option value="10" selected>10 songs</option>
+                <option value="15">15 songs</option>
+                <option value="20">20 songs</option>
+                <option value="25">25 songs</option>
+                <option value="30">30 songs</option>
+              </select>
+            </label>
+
+            <label class="field compact-field hidden" id="timed-option-field">
+              <span>Timer</span>
+              <select id="timed-duration">
+                <option value="30" selected>30 seconds</option>
+                <option value="60">60 seconds</option>
+                <option value="90">90 seconds</option>
+                <option value="120">2 minutes</option>
+                <option value="150">2 minutes 30 seconds</option>
+                <option value="180">3 minutes</option>
+              </select>
+            </label>
+
+            <p id="setup-note" class="setup-note">One round at a time, perfect for quick play.</p>
+          </div>
+        </section>
+
         <div class="mode-grid">
-          <button class="mode-tile" id="guess-lyric-tile" type="button">
-            <span class="tile-icon" aria-hidden="true">L</span>
-            <span>
-              <span class="tile-title">Guess the Lyric</span>
-              <span class="tile-copy">Lyrics appear, you guess the song and artist.</span>
+          <button class="mode-card" id="guess-album-tile" type="button" data-mode="album">
+            <span class="mode-glow"></span>
+            <span class="mode-card-top">
+              <span class="mode-icon" aria-hidden="true">A</span>
+              <span class="mode-badge">Cover Mode</span>
             </span>
+            <span class="mode-title">Album Cover</span>
+            <span class="mode-copy">See the cover, then score points for the song, album, and artist.</span>
           </button>
 
-          <button class="mode-tile" id="guess-song-tile" type="button">
-            <span class="tile-icon" aria-hidden="true">P</span>
-            <span>
-              <span class="tile-title">Guess the Song</span>
-              <span class="tile-copy">Play a short preview, then guess the song and artist.</span>
+          <button class="mode-card" id="guess-lyric-tile" type="button" data-mode="lyrics">
+            <span class="mode-glow"></span>
+            <span class="mode-card-top">
+              <span class="mode-icon" aria-hidden="true">L</span>
+              <span class="mode-badge">Text Mode</span>
             </span>
+            <span class="mode-title">Guess the Lyric</span>
+            <span class="mode-copy">Read the lyric drop and chase the correct song and artist before the reveal.</span>
+          </button>
+
+          <button class="mode-card" id="guess-song-tile" type="button" data-mode="song">
+            <span class="mode-glow"></span>
+            <span class="mode-card-top">
+              <span class="mode-icon" aria-hidden="true">P</span>
+              <span class="mode-badge">Preview Mode</span>
+            </span>
+            <span class="mode-title">Guess the Song</span>
+            <span class="mode-copy">Play the preview clip and race your memory for the right title and artist.</span>
+          </button>
+
+          <button class="mode-card" id="finish-lyric-tile" type="button" data-mode="finish">
+            <span class="mode-glow"></span>
+            <span class="mode-card-top">
+              <span class="mode-icon" aria-hidden="true">F</span>
+              <span class="mode-badge">Fill Mode</span>
+            </span>
+            <span class="mode-title">Finish the Lyric</span>
+            <span class="mode-copy">See the start of a lyric, fill in the missing words, and keep the run alive.</span>
           </button>
         </div>
       </section>
 
-      <section id="game" class="view" aria-labelledby="game-title">
-        <div class="topbar">
-          <button class="icon-button" id="back-button" type="button" aria-label="Back to modes" title="Back">
-            &larr;
-          </button>
-          <div>
-            <p class="eyebrow">Mode</p>
-            <h1 id="game-title">Guess the Lyric</h1>
+      <section id="game" class="view game-view" aria-labelledby="game-title">
+        <header class="game-header">
+          <div class="game-header-left">
+            <button class="icon-button" id="back-button" type="button" aria-label="Back to modes" title="Back">
+              <span aria-hidden="true">&larr;</span>
+            </button>
+            <div>
+              <p class="eyebrow">Now Playing</p>
+              <h1 id="game-title">Album Cover</h1>
+            </div>
           </div>
-        </div>
 
-        <div class="game-grid">
-          <section class="lyrics-panel" aria-label="Prompt">
-            <div class="lyrics-header">
-              <h2 id="prompt-title">Lyrics</h2>
-              <button id="play-button" class="primary-button" type="button">Play</button>
-            </div>
-            <pre id="lyrics-box">Press Play to load a random song from your playlist.</pre>
-            <div id="audio-box" class="audio-box hidden">
-              <audio id="audio-player" controls></audio>
-            </div>
-          </section>
+          <div class="game-header-right">
+            <span id="mode-pill" class="mode-pill">Album</span>
+            <span id="session-pill" class="mode-pill">Classic</span>
+            <button id="play-button" class="primary-button" type="button">
+              <span class="button-label">Play Again</span>
+            </button>
+          </div>
+        </header>
 
-          <form id="guess-form" class="guess-panel">
-            <label>
-              Song name
-              <input id="song-input" name="song_name" type="text" autocomplete="off" required>
-            </label>
-            <label>
-              Artist
-              <input id="artist-input" name="artist" type="text" autocomplete="off" required>
-            </label>
-            <button class="primary-button" id="submit-button" type="submit" disabled>Submit Guess</button>
-            <p id="result-message" class="result-message" role="status" aria-live="polite"></p>
-            <p id="answer-message" class="answer-message"></p>
-          </form>
-        </div>
+        <section class="status-strip">
+          <div class="status-card">
+            <span class="status-label">Score</span>
+            <strong id="score-value">0</strong>
+          </div>
+          <div class="status-card">
+            <span class="status-label">Progress</span>
+            <strong id="progress-value">Round 1</strong>
+          </div>
+          <div class="status-card">
+            <span class="status-label">Timer</span>
+            <strong id="timer-value">-</strong>
+          </div>
+        </section>
+
+        <section class="play-surface">
+          <div class="prompt-panel">
+            <div class="panel-header">
+              <div>
+                <p class="panel-label">Prompt</p>
+                <h2 id="prompt-title">Album Cover</h2>
+              </div>
+              <div id="loading-indicator" class="loading-indicator hidden" aria-live="polite">
+                <span class="spinner"></span>
+                <span id="loading-copy">Loading round...</span>
+              </div>
+            </div>
+
+            <div id="lyrics-frame" class="prompt-frame hidden">
+              <pre id="lyrics-box">Pick a mode to start.</pre>
+            </div>
+
+            <div id="finish-context-tools" class="context-tools hidden">
+              <button id="reveal-context-button" class="secondary-button" type="button">Reveal More Context</button>
+              <p id="context-status" class="context-status"></p>
+            </div>
+
+            <div id="audio-box" class="audio-stage hidden">
+              <div class="wave-row" aria-hidden="true">
+                <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+              </div>
+              <audio id="audio-player" controls preload="none"></audio>
+              <p class="audio-note">Listen closely, then lock in your guess.</p>
+            </div>
+
+            <div id="album-box" class="album-stage hidden">
+              <img id="album-image" alt="Album cover prompt">
+              <p class="audio-note">Guess the song, the album, and the artist for the biggest score.</p>
+            </div>
+          </div>
+
+          <aside class="control-panel">
+            <div class="panel-header">
+              <div>
+                <p class="panel-label">Your Guess</p>
+                <h2 id="guess-panel-title">Song + Artist</h2>
+              </div>
+            </div>
+
+            <form id="guess-form" class="guess-form">
+              <label class="field" id="song-field">
+                <span>Song name</span>
+                <input id="song-input" name="song_name" type="text" autocomplete="off" placeholder="Type the song title">
+              </label>
+
+              <label class="field hidden" id="album-field">
+                <span>Album name</span>
+                <input id="album-input" name="album_name" type="text" autocomplete="off" placeholder="Type the album name">
+              </label>
+
+              <label class="field hidden" id="lyric-field">
+                <span>Missing lyric</span>
+                <input id="lyric-input" name="lyric" type="text" autocomplete="off" placeholder="Type the missing words">
+              </label>
+
+              <label class="field" id="artist-field">
+                <span>Artist</span>
+                <input id="artist-input" name="artist" type="text" autocomplete="off" placeholder="Type the artist">
+              </label>
+
+              <button class="primary-button submit-button" id="submit-button" type="submit" disabled>
+                <span class="button-label">Submit Guess</span>
+              </button>
+
+              <section class="feedback-panel">
+                <p id="result-message" class="result-message" role="status" aria-live="polite"></p>
+                <p id="answer-message" class="answer-message"></p>
+                <p id="breakdown-message" class="answer-message"></p>
+                <p class="answer-message">Album mode scoring: Song 50, Album 30, Artist 20, combo bonus for 2/3 or 3/3.</p>
+              </section>
+            </form>
+          </aside>
+        </section>
       </section>
     </main>
 
