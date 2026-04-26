@@ -8,7 +8,7 @@
 
 
 import spotipy
-from spotipy.oauth2 import SpotifyOAuth
+from spotipy.oauth2 import SpotifyClientCredentials
 
 from dotenv import load_dotenv
 import os
@@ -24,12 +24,9 @@ def extract():
     if not CLIENT_SECRET:
         raise RuntimeError("SPOTIFY_CLIENT_SECRET is missing from .env")
 
-    sp = spotipy.Spotify(auth_manager=SpotifyOAuth(
-        client_id = CLIENT_ID,
-        client_secret = CLIENT_SECRET,
-        redirect_uri="http://127.0.0.1:8888/callback",
-        scope="playlist-read-private",
-        cache_path=".cache"
+    sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(
+        client_id=CLIENT_ID,
+        client_secret=CLIENT_SECRET,
     ))
     # https://open.spotify.com/playlist/10VrveaTL07KKG2f4qeTYy?si=BFAwuHxhRv-638Qux_aekg HINDI PARTY
     # https://open.spotify.com/playlist/37i9dQZF1DWWylYLMvjuRG?si=hIxM49QcRii6tNXv46KXJA POP

@@ -1,3 +1,12 @@
+---
+title: Song Game
+emoji: M
+colorFrom: green
+colorTo: blue
+sdk: docker
+app_port: 7860
+---
+
 # Song Game
 
 A FastAPI music guessing game powered by Spotify playlist data, Genius lyrics, and iTunes preview clips.
