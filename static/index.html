@@ -20,6 +20,9 @@
           <h1 id="home-title">Pick a mode, lock a run type, and jump straight into the round.</h1>
           <p class="hero-note">Album cover, lyrics, preview, and finish-the-lyric all run from one flow, with classic, arcade, and timed options built in.</p>
         </div>
+        <button class="icon-button settings-fab" id="settings-button" type="button" aria-label="Open playlist settings" title="Settings">
+          <span aria-hidden="true">&#9881;</span>
+        </button>
 
         <section class="setup-panel" aria-labelledby="setup-title">
           <div class="setup-copy">
@@ -57,6 +60,7 @@
               </select>
             </label>
 
+            <button class="secondary-button" id="playlist-settings-inline" type="button">Playlist Settings</button>
             <p id="setup-note" class="setup-note">One round at a time, perfect for quick play.</p>
           </div>
         </section>
@@ -220,6 +224,56 @@
         </section>
       </section>
     </main>
+
+    <div class="modal-backdrop hidden" id="settings-modal" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+      <section class="settings-modal-panel">
+        <div class="panel-header">
+          <div>
+            <p class="panel-label">Settings</p>
+            <h2 id="settings-title">Playlist and API access</h2>
+          </div>
+          <button class="icon-button" id="settings-close-button" type="button" aria-label="Close settings" title="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+
+        <form id="settings-form" class="settings-form">
+          <label class="field">
+            <span>Spotify playlist URL</span>
+            <input id="settings-playlist-url" name="playlist_url" type="url" autocomplete="off" placeholder="https://open.spotify.com/playlist/...">
+          </label>
+
+          <div class="settings-grid">
+            <label class="field">
+              <span>Spotify client ID</span>
+              <input id="settings-spotify-client-id" name="spotify_client_id" type="password" autocomplete="off" placeholder="Optional if server has one">
+            </label>
+
+            <label class="field">
+              <span>Spotify client secret</span>
+              <input id="settings-spotify-client-secret" name="spotify_client_secret" type="password" autocomplete="off" placeholder="Optional if server has one">
+            </label>
+          </div>
+
+          <label class="field">
+            <span>Genius API token</span>
+            <input id="settings-lyrics-key" name="lyrics_key" type="password" autocomplete="off" placeholder="Optional if server has one">
+          </label>
+
+          <label class="check-field">
+            <input id="settings-save-private" type="checkbox">
+            <span>Remember API credentials in this browser</span>
+          </label>
+
+          <p id="settings-status" class="settings-status"></p>
+
+          <div class="settings-actions">
+            <button class="secondary-button" id="settings-clear-button" type="button">Clear</button>
+            <button class="primary-button" type="submit">Save Settings</button>
+          </div>
+        </form>
+      </section>
+    </div>
 
     <script src="/static/app.js"></script>
   </body>

@@ -18,21 +18,46 @@ load_dotenv()
 CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
 CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET")
 
-def extract():
-    if not CLIENT_ID:
-        raise RuntimeError("SPOTIFY_CLIENT_ID is missing from .env")
-    if not CLIENT_SECRET:
-        raise RuntimeError("SPOTIFY_CLIENT_SECRET is missing from .env")
+
+def playlist_id_from_url(value: str | None) -> str:
+    if not value:
+        return ""
+
+    value = value.strip()
+    if not value:
+        return ""
+
+    if "open.spotify.com/playlist/" in value:
+        playlist_id = value.split("open.spotify.com/playlist/", 1)[1]
+        return playlist_id.split("?", 1)[0].split("/", 1)[0]
+
+    if "spotify:playlist:" in value:
+        return value.rsplit(":", 1)[-1]
+
+    return value
+
+
+def extract(
+    playlist_url: str | None = None,
+    client_id: str | None = None,
+    client_secret: str | None = None,
+):
+    spotify_client_id = client_id or CLIENT_ID
+    spotify_client_secret = client_secret or CLIENT_SECRET
+
+    if not spotify_client_id:
+        raise RuntimeError("Spotify client ID is missing.")
+    if not spotify_client_secret:
+        raise RuntimeError("Spotify client secret is missing.")
+    playlist_id = playlist_id_from_url(playlist_url)
+    if not playlist_id:
+        raise RuntimeError("Spotify playlist URL is missing.")
 
     sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(
-        client_id=CLIENT_ID,
-        client_secret=CLIENT_SECRET,
+        client_id=spotify_client_id,
+        client_secret=spotify_client_secret,
     ))
-    # https://open.spotify.com/playlist/10VrveaTL07KKG2f4qeTYy?si=BFAwuHxhRv-638Qux_aekg HINDI PARTY
-    # https://open.spotify.com/playlist/37i9dQZF1DWWylYLMvjuRG?si=hIxM49QcRii6tNXv46KXJA POP
-    # https://open.spotify.com/playlist/3JXeBOl0C7b55w1Y8IiwSx?si=5b7QQXAbS1qUuOxjvs8yvg ROCKAFELLAS
-    # https://open.spotify.com/playlist/1Y50zhgUXm0LytYnNYsRZo?si=tqwN-4F7QAyFapIet8JAfA MINE
-    results = sp.playlist_tracks("10VrveaTL07KKG2f4qeTYy")
+    results = sp.playlist_tracks(playlist_id)
     items = list(results.get("items", []))
 
     while results.get("next"):

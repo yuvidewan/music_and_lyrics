@@ -43,6 +43,18 @@ const answerMessage = document.querySelector("#answer-message");
 const breakdownMessage = document.querySelector("#breakdown-message");
 const loadingIndicator = document.querySelector("#loading-indicator");
 const loadingCopy = document.querySelector("#loading-copy");
+const settingsButton = document.querySelector("#settings-button");
+const playlistSettingsInline = document.querySelector("#playlist-settings-inline");
+const settingsModal = document.querySelector("#settings-modal");
+const settingsCloseButton = document.querySelector("#settings-close-button");
+const settingsForm = document.querySelector("#settings-form");
+const settingsPlaylistUrl = document.querySelector("#settings-playlist-url");
+const settingsSpotifyClientId = document.querySelector("#settings-spotify-client-id");
+const settingsSpotifyClientSecret = document.querySelector("#settings-spotify-client-secret");
+const settingsLyricsKey = document.querySelector("#settings-lyrics-key");
+const settingsSavePrivate = document.querySelector("#settings-save-private");
+const settingsClearButton = document.querySelector("#settings-clear-button");
+const settingsStatus = document.querySelector("#settings-status");
 
 let currentMode = "album";
 let currentSessionType = "classic";
@@ -52,6 +64,14 @@ let timerInterval = null;
 let timerEndAt = null;
 let isEndingTimedSession = false;
 let revealedContextCount = 0;
+
+const settingsStorageKey = "songGameSettings";
+let appSettings = {
+  playlist_url: "",
+  spotify_client_id: "",
+  spotify_client_secret: "",
+  lyrics_key: "",
+};
 
 const modeConfig = {
   album: {
@@ -105,6 +125,86 @@ const sessionCopy = {
 function showView(viewName) {
   homeView.classList.toggle("active", viewName === "home");
   gameView.classList.toggle("active", viewName === "game");
+}
+
+function safeJsonParse(value) {
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
+}
+
+function normalizeSettings(settings) {
+  return {
+    playlist_url: settings?.playlist_url?.trim() || "",
+    spotify_client_id: settings?.spotify_client_id?.trim() || "",
+    spotify_client_secret: settings?.spotify_client_secret?.trim() || "",
+    lyrics_key: settings?.lyrics_key?.trim() || "",
+  };
+}
+
+function applySettingsToForm() {
+  settingsPlaylistUrl.value = appSettings.playlist_url;
+  settingsSpotifyClientId.value = appSettings.spotify_client_id;
+  settingsSpotifyClientSecret.value = appSettings.spotify_client_secret;
+  settingsLyricsKey.value = appSettings.lyrics_key;
+}
+
+function readSettingsForm() {
+  return normalizeSettings({
+    playlist_url: settingsPlaylistUrl.value,
+    spotify_client_id: settingsSpotifyClientId.value,
+    spotify_client_secret: settingsSpotifyClientSecret.value,
+    lyrics_key: settingsLyricsKey.value,
+  });
+}
+
+function savePublicSettings() {
+  const saved = {
+    playlist_url: appSettings.playlist_url,
+  };
+
+  if (settingsSavePrivate.checked) {
+    saved.spotify_client_id = appSettings.spotify_client_id;
+    saved.spotify_client_secret = appSettings.spotify_client_secret;
+    saved.lyrics_key = appSettings.lyrics_key;
+  }
+
+  localStorage.setItem(settingsStorageKey, JSON.stringify(saved));
+}
+
+async function loadSettings() {
+  const stored = normalizeSettings(safeJsonParse(localStorage.getItem(settingsStorageKey)) || {});
+  appSettings = stored;
+
+  try {
+    const response = await fetch("/api/settings/defaults");
+    if (response.ok) {
+      const defaults = await response.json();
+      if (!appSettings.playlist_url && defaults.playlist_url) {
+        appSettings.playlist_url = defaults.playlist_url;
+      }
+    }
+  } catch {
+    // Defaults are optional; the settings modal remains usable without them.
+  }
+
+  settingsSavePrivate.checked = Boolean(
+    appSettings.spotify_client_id || appSettings.spotify_client_secret || appSettings.lyrics_key
+  );
+  applySettingsToForm();
+}
+
+function openSettings() {
+  applySettingsToForm();
+  settingsStatus.textContent = "";
+  settingsModal.classList.remove("hidden");
+  settingsPlaylistUrl.focus();
+}
+
+function closeSettings() {
+  settingsModal.classList.add("hidden");
 }
 
 function setLoading(isLoading, message = "Loading round...") {
@@ -359,6 +459,10 @@ function buildStartPayload() {
   const payload = {
     mode: currentMode,
     session_type: currentSessionType,
+    playlist_url: appSettings.playlist_url,
+    spotify_client_id: appSettings.spotify_client_id,
+    spotify_client_secret: appSettings.spotify_client_secret,
+    lyrics_key: appSettings.lyrics_key,
   };
 
   if (currentSessionType === "arcade") {
@@ -373,6 +477,8 @@ function buildStartPayload() {
 }
 
 async function startSession() {
+  appSettings = readSettingsForm();
+  savePublicSettings();
   resetPrompt(modeConfig[currentMode].loading);
   clearFeedback();
   showView("game");
@@ -542,6 +648,37 @@ revealContextButton.addEventListener("click", () => {
   updateFinishContextUI(currentRound.prompt);
 });
 
+settingsButton.addEventListener("click", openSettings);
+playlistSettingsInline.addEventListener("click", openSettings);
+settingsCloseButton.addEventListener("click", closeSettings);
+settingsModal.addEventListener("click", (event) => {
+  if (event.target === settingsModal) {
+    closeSettings();
+  }
+});
+
+settingsForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  appSettings = readSettingsForm();
+  savePublicSettings();
+  settingsStatus.textContent = "Settings saved for this browser.";
+  closeSettings();
+});
+
+settingsClearButton.addEventListener("click", () => {
+  appSettings = {
+    playlist_url: "",
+    spotify_client_id: "",
+    spotify_client_secret: "",
+    lyrics_key: "",
+  };
+  localStorage.removeItem(settingsStorageKey);
+  settingsSavePrivate.checked = false;
+  applySettingsToForm();
+  settingsStatus.textContent = "Settings cleared.";
+});
+
+loadSettings();
 updateSetupControls();
 applyModeChrome(currentMode);
 resetPrompt(modeConfig[currentMode].empty);

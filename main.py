@@ -21,6 +21,7 @@ import os
 
 load_dotenv()
 LYRIC_KEY = os.getenv("LYRICS_KEY")
+DEFAULT_PLAYLIST_URL = os.getenv("DEFAULT_PLAYLIST_URL", "")
 
 STATIC_DIR = Path(__file__).parent / "static"
 PLAYLIST_CACHE_TTL = 600
@@ -33,12 +34,12 @@ SESSION_TYPES = {"classic", "arcade", "timed"}
 app = FastAPI()
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
-playlist_cache: dict[str, Any] = {"songs": None, "expires_at": 0.0}
+playlist_cache: dict[str, dict[str, Any]] = {}
 lyrics_cache: dict[str, dict[str, Any]] = {}
 preview_cache: dict[str, dict[str, Any]] = {}
 sessions: dict[str, dict[str, Any]] = {}
 finish_lyric_games: dict[str, dict[str, Any]] = {}
-genius_client: lyricsgenius.Genius | None = None
+genius_clients: dict[str, lyricsgenius.Genius] = {}
 
 
 class StartSessionRequest(BaseModel):
@@ -46,6 +47,10 @@ class StartSessionRequest(BaseModel):
     session_type: str = "classic"
     round_limit: int | None = None
     duration_seconds: int | None = None
+    playlist_url: str = ""
+    spotify_client_id: str = ""
+    spotify_client_secret: str = ""
+    lyrics_key: str = ""
 
 
 class SessionGuessRequest(BaseModel):
@@ -65,6 +70,10 @@ class EndSessionRequest(BaseModel):
     session_id: str
 
 
+class DefaultSettingsResponse(BaseModel):
+    playlist_url: str = ""
+
+
 def now_ts() -> float:
     return time.time()
 
@@ -80,46 +89,80 @@ def song_key(song: dict[str, Any]) -> str:
     return f"{normalize_text(song['name'])}::{normalize_text(song['artist'])}"
 
 
+def clean_setting(value: str | None) -> str:
+    return value.strip() if value else ""
+
+
+def request_settings(request: StartSessionRequest) -> dict[str, str]:
+    return {
+        "playlist_url": clean_setting(request.playlist_url) or DEFAULT_PLAYLIST_URL,
+        "spotify_client_id": clean_setting(request.spotify_client_id),
+        "spotify_client_secret": clean_setting(request.spotify_client_secret),
+        "lyrics_key": clean_setting(request.lyrics_key),
+    }
+
+
+def playlist_cache_key(settings: dict[str, str]) -> str:
+    return "::".join([
+        settings["playlist_url"],
+        settings["spotify_client_id"],
+        settings["spotify_client_secret"],
+    ])
+
+
+def lyrics_cache_key(song: dict[str, Any], lyrics_key: str) -> str:
+    return f"{lyrics_key or 'server'}::{song_key(song)}"
+
+
 def genius_result_matches_artist(song: Any, artist: str) -> bool:
     genius_artist = normalize_text(song.artist)
     artist = normalize_text(artist)
     return artist in genius_artist or genius_artist in artist
 
 
-def get_genius_client() -> lyricsgenius.Genius:
-    global genius_client
-    if genius_client is None:
-        if not LYRIC_KEY:
-            raise RuntimeError("LYRICS_KEY is missing from .env")
-        genius_client = lyricsgenius.Genius(LYRIC_KEY, timeout=15, retries=1)
-    return genius_client
+def get_genius_client(lyrics_key: str = "") -> lyricsgenius.Genius:
+    token = lyrics_key or LYRIC_KEY
+    if not token:
+        raise RuntimeError("Genius API token is missing.")
+    if token not in genius_clients:
+        genius_clients[token] = lyricsgenius.Genius(token, timeout=15, retries=1)
+    return genius_clients[token]
 
 
-def load_songs(force_refresh: bool = False) -> list[dict[str, Any]]:
+def load_songs(settings: dict[str, str] | None = None, force_refresh: bool = False) -> list[dict[str, Any]]:
+    settings = settings or request_settings(StartSessionRequest(mode="album"))
+    key = playlist_cache_key(settings)
+    cached = playlist_cache.get(key)
     if (
         not force_refresh
-        and playlist_cache["songs"] is not None
-        and playlist_cache["expires_at"] > now_ts()
+        and cached is not None
+        and cached["expires_at"] > now_ts()
     ):
-        return playlist_cache["songs"]
+        return cached["songs"]
 
-    results = extract()
+    results = extract(
+        playlist_url=settings["playlist_url"],
+        client_id=settings["spotify_client_id"] or None,
+        client_secret=settings["spotify_client_secret"] or None,
+    )
     songs = clean_playlist_data(results=results)
     if not songs:
         raise RuntimeError("No songs found in playlist")
 
-    playlist_cache["songs"] = songs
-    playlist_cache["expires_at"] = now_ts() + PLAYLIST_CACHE_TTL
+    playlist_cache[key] = {
+        "songs": songs,
+        "expires_at": now_ts() + PLAYLIST_CACHE_TTL,
+    }
     return songs
 
 
-def get_cached_lyrics(song: dict[str, Any]) -> str | None:
-    key = song_key(song)
+def get_cached_lyrics(song: dict[str, Any], lyrics_key: str = "") -> str | None:
+    key = lyrics_cache_key(song, lyrics_key)
     cached = lyrics_cache.get(key)
     if cached and cached["expires_at"] > now_ts():
         return cached["lyrics"]
 
-    genius = get_genius_client()
+    genius = get_genius_client(lyrics_key)
     result = genius.search_song(song["name"], song["artist"])
     if result is None or result.lyrics is None:
         return None
@@ -157,8 +200,9 @@ def scrub_lyrics_for_display(lyrics: str) -> str:
     return body or lyrics
 
 
-def build_lyrics_round(song: dict[str, Any]) -> dict[str, Any] | None:
-    lyrics = get_cached_lyrics(song)
+def build_lyrics_round(song: dict[str, Any], settings: dict[str, str] | None = None) -> dict[str, Any] | None:
+    settings = settings or {}
+    lyrics = get_cached_lyrics(song, settings.get("lyrics_key", ""))
     if not lyrics:
         return None
 
@@ -241,8 +285,9 @@ def lyric_context_lines(lyrics: str) -> list[str]:
     return lines
 
 
-def build_finish_lyric_round(song: dict[str, Any]) -> dict[str, Any] | None:
-    lyrics = get_cached_lyrics(song)
+def build_finish_lyric_round(song: dict[str, Any], settings: dict[str, str] | None = None) -> dict[str, Any] | None:
+    settings = settings or {}
+    lyrics = get_cached_lyrics(song, settings.get("lyrics_key", ""))
     if not lyrics:
         return None
 
@@ -287,7 +332,7 @@ def build_finish_lyric_round(song: dict[str, Any]) -> dict[str, Any] | None:
     }
 
 
-def get_finish_lyric_data_for_frontend() -> dict[str, Any]:
+def get_finish_lyric_data_for_frontend(settings: dict[str, str] | None = None) -> dict[str, Any]:
     # Returns one finish-the-lyric round for the frontend.
     #
     # Frontend should expect a Python dict / JSON object with:
@@ -324,12 +369,13 @@ def get_finish_lyric_data_for_frontend() -> dict[str, Any]:
     #       before the user submits. keep it hidden client-side or strip it
     #       out if you expose this through an endpoint.
     # }
-    songs = load_songs()
+    settings = settings or request_settings(StartSessionRequest(mode="finish"))
+    songs = load_songs(settings)
     shuffled = songs[:]
     random.shuffle(shuffled)
 
     for song in shuffled:
-        round_data = build_finish_lyric_round(song)
+        round_data = build_finish_lyric_round(song, settings)
         if round_data is None:
             continue
 
@@ -353,15 +399,16 @@ def get_finish_lyric_data_for_frontend() -> dict[str, Any]:
     raise RuntimeError("Could not prepare a finish-the-lyric round.")
 
 
-def build_round(mode: str, song: dict[str, Any]) -> dict[str, Any] | None:
+def build_round(mode: str, song: dict[str, Any], settings: dict[str, str] | None = None) -> dict[str, Any] | None:
+    settings = settings or {}
     if mode == "lyrics":
-        return build_lyrics_round(song)
+        return build_lyrics_round(song, settings)
     if mode == "song":
         return build_song_round(song)
     if mode == "album":
         return build_album_round(song)
     if mode == "finish":
-        finish_data = build_finish_lyric_round(song)
+        finish_data = build_finish_lyric_round(song, settings)
         if finish_data is None:
             return None
 
@@ -385,8 +432,9 @@ def build_round(mode: str, song: dict[str, Any]) -> dict[str, Any] | None:
     return None
 
 
-def pick_rounds(mode: str, count: int) -> list[dict[str, Any]]:
-    songs = load_songs()
+def pick_rounds(mode: str, count: int, settings: dict[str, str] | None = None) -> list[dict[str, Any]]:
+    settings = settings or request_settings(StartSessionRequest(mode=mode))
+    songs = load_songs(settings)
     if not songs:
         raise RuntimeError("No songs found in playlist")
 
@@ -395,7 +443,7 @@ def pick_rounds(mode: str, count: int) -> list[dict[str, Any]]:
     rounds = []
 
     for song in shuffled:
-        round_data = build_round(mode, song)
+        round_data = build_round(mode, song, settings)
         if round_data is not None:
             rounds.append(round_data)
         if len(rounds) >= count:
@@ -465,7 +513,7 @@ def advance_session(session: dict[str, Any]) -> None:
             return
 
         if session["current_index"] >= len(session["rounds"]):
-            extra_rounds = pick_rounds(session["mode"], 8)
+            extra_rounds = pick_rounds(session["mode"], 8, session["settings"])
             session["rounds"].extend(extra_rounds)
     elif session["current_index"] >= len(session["rounds"]):
         session["current_round"] = None
@@ -476,11 +524,12 @@ def advance_session(session: dict[str, Any]) -> None:
 
 def create_session(request: StartSessionRequest) -> dict[str, Any]:
     round_limit, duration_seconds = ensure_session_values(request)
+    settings = request_settings(request)
 
     if request.session_type == "timed":
-        initial_rounds = pick_rounds(request.mode, 12)
+        initial_rounds = pick_rounds(request.mode, 12, settings)
     else:
-        initial_rounds = pick_rounds(request.mode, round_limit or 1)
+        initial_rounds = pick_rounds(request.mode, round_limit or 1, settings)
 
     session_id = str(uuid4())
     session = {
@@ -494,6 +543,7 @@ def create_session(request: StartSessionRequest) -> dict[str, Any]:
         "rounds": initial_rounds,
         "current_round": None,
         "ends_at": now_ts() + duration_seconds if duration_seconds else None,
+        "settings": settings,
     }
     advance_session(session)
     sessions[session_id] = session
@@ -702,6 +752,11 @@ def submit_finish_lyric_guess(guess: FinishLyricGuess) -> dict[str, Any]:
 @app.get("/")
 def home():
     return FileResponse(STATIC_DIR / "index.html")
+
+
+@app.get("/api/settings/defaults")
+def default_settings() -> DefaultSettingsResponse:
+    return DefaultSettingsResponse(playlist_url=DEFAULT_PLAYLIST_URL)
 
 
 @app.post("/api/session/start")
